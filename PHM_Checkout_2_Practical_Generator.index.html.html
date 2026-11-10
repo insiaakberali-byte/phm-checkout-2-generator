@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PHM Checkout #2 Practical Generator</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color-scheme:light}body{background:#f5f7fb;color:#172033;margin:0;padding:24px}.wrap{max-width:1000px;margin:auto}h1{margin-bottom:4px}p{color:#526076}.groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.panel,.results{background:white;border:1px solid #dce2ed;border-radius:14px;padding:18px;box-shadow:0 3px 12px #1720330a}label{display:block;font-weight:650;margin-bottom:8px}textarea{width:100%;height:300px;box-sizing:border-box;resize:vertical;border:1px solid #b9c5d8;border-radius:8px;padding:10px;font:14px/1.5 system-ui}input[type=number]{width:80px;padding:8px;border:1px solid #b9c5d8;border-radius:8px;font:inherit}.count{display:flex;align-items:center;gap:10px;margin-top:12px}.count label{margin:0}.actions{display:flex;gap:12px;margin:20px 0;flex-wrap:wrap}button{border:0;border-radius:9px;padding:12px 20px;font-weight:700;font-size:15px;cursor:pointer;background:#2255ce;color:white}button.secondary{background:#e8eefb;color:#214aa8}.results{margin-top:8px}ol{padding-left:25px}li{padding:7px 0;border-bottom:1px solid #edf0f5}li:last-child{border:0}.instruction{font-size:13px;color:#526076;margin-top:5px}.tag{font-size:12px;font-weight:700;color:#59667e;margin-left:8px}#message{color:#a02929;font-weight:600}small{color:#526076}@media(max-width:750px){.groups{grid-template-columns:1fr}textarea{height:190px}}
+</style>
+</head>
+<body><main class="wrap">
+<h1>PHM Checkout #2 Practical Generator</h1>
+<p>Enter one item per line in each group. Choose how many to draw, then generate a fully shuffled checkout order. Items won't repeat within a draw. All four MMT selections are practiced against gravity (AG). Two eligible MMTs also receive a hypothetical gravity-eliminated (GE) ROM scenario for you to grade. No partner needs to simulate a specific strength grade.</p>
+<section class="groups">
+<div class="panel"><label for="groupA">UE MMT</label><textarea id="groupA" spellcheck="false" placeholder="One UE MMT test per line"></textarea><div class="count"><label for="countA">Pick</label><input id="countA" type="number" min="0" step="1" value="2"></div></div>
+<div class="panel"><label for="groupB">LE / Trunk MMT</label><textarea id="groupB" spellcheck="false" placeholder="One LE/trunk MMT test per line"></textarea><div class="count"><label for="countB">Pick</label><input id="countB" type="number" min="0" step="1" value="2"></div></div>
+<div class="panel"><label for="groupC">LE Goniometry</label><textarea id="groupC" spellcheck="false" placeholder="One LE goniometry motion per line"></textarea><div class="count"><label for="countC">Pick</label><input id="countC" type="number" min="0" step="1" value="2"></div></div>
+</section>
+<div class="actions"><button id="generate">Generate checkout</button><button id="answers" class="secondary" type="button">Show GE answers</button><button id="copy" class="secondary" type="button">Copy results</button></div>
+<div id="message" role="alert" aria-live="polite"></div>
+<section class="results" aria-live="polite"><h2>Checkout #2 practice round</h2><ol id="result"><li>Click Generate checkout to begin.</li></ol><small id="summary"></small></section>
+<p><small>All selected MMTs: demonstrate against gravity. Exactly two selected MMTs also ask you to demonstrate or describe the GE patient position, describe the GE movement, and grade a hypothetical ROM finding. Answers are hidden until you choose to reveal them. GE prompts are drawn only from tests listed in the official below-grade-3 category. Edit names carefully: matching uses the exact official names.</small></p>
+</main>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const presets = {
+ A: `Humeral lateral rotators\nHumeral medial rotators\nAnterior deltoid\nMiddle deltoid and supraspinatus\nTriceps brachii\nBiceps brachii\nBrachialis\nBrachioradialis\nExtensor carpi ulnaris\nExtensor carpi radialis longus and brevis\nFlexor carpi ulnaris\nFlexor carpi radialis\nWrist flexors as a group\nWrist extensors as a group\nSerratus anterior\nUpper trapezius\nLower trapezius\nMiddle trapezius\nLatissimus dorsi\nPectoralis major\nFlexor digitorum profundus\nFlexor digitorum superficialis\nExtensor digitorum\nPalmar interossei\nDorsal interossei\nAbductor pollicis longus\nExtensor pollicis longus\nExtensor pollicis brevis\nFlexor pollicis longus\nFlexor pollicis brevis\nOpponens pollicis\nAdductor pollicis`,
+ B: `Quadriceps femoris\nHamstrings as a group\nHip adductor group\nGluteus maximus\nGluteus medius\nHip lateral rotator group\nHip medial rotator group\nIliopsoas\nPeroneus longus and brevis\nTibialis posterior\nTibialis anterior\nPlantar flexors as a group\nTrunk extensor groups\nQuadratus lumborum\nOblique trunk flexors\nUpper abdominals\nLower abdominals`,
+ C: `Hip flexion\nHip extension\nHip abduction\nHip internal rotation\nHip external rotation\nKnee flexion\nKnee hyperextension\nAnkle dorsiflexion\nAnkle plantarflexion`
+};
+for(const group of ['A','B','C']) $('group'+group).value=presets[group];
+// Category restrictions transcribed from the 2026 official checkout instructions.
+// Names in these editable textareas must match these keys to receive an official category.
+const ueAbove = new Set(`Humeral lateral rotators|Humeral medial rotators|Anterior deltoid|Middle deltoid and supraspinatus|Triceps brachii|Biceps brachii|Brachialis|Brachioradialis|Extensor carpi ulnaris|Extensor carpi radialis longus and brevis|Flexor carpi ulnaris|Flexor carpi radialis`.split('|'));
+const ueBelow = new Set(`Humeral lateral rotators|Humeral medial rotators|Anterior deltoid|Middle deltoid and supraspinatus|Triceps brachii|Biceps brachii|Brachialis|Brachioradialis|Wrist flexors as a group|Wrist extensors as a group`.split('|'));
+const leAbove = new Set(`Quadriceps femoris|Hamstrings as a group|Hip adductor group|Gluteus maximus|Gluteus medius|Hip lateral rotator group|Hip medial rotator group|Iliopsoas|Peroneus longus and brevis|Tibialis posterior|Tibialis anterior`.split('|'));
+const leBelow = new Set(`Quadriceps femoris|Hamstrings as a group|Hip adductor group|Gluteus maximus|Gluteus medius|Hip lateral rotator group|Hip medial rotator group|Iliopsoas`.split('|'));
+function isGeEligible(name,key){
+ if(key==='A') return ueBelow.has(name);
+ if(key==='B') return leBelow.has(name) || name==='Plantar flexors as a group';
+ return false;
+}
+let last=[]; let showAnswers=false;
+const geScenarios=[
+ {finding:'The patient completes full ROM in the gravity-eliminated position.',answer:'Grade 2/5 — full ROM with gravity eliminated.'},
+ {finding:'The patient completes between one-third and two-thirds of ROM in the gravity-eliminated position.',answer:'Grade 2−/5 — one-third to two-thirds of GE ROM.'}
+];
+function shuffle(array){for(let i=array.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[array[i],array[j]]=[array[j],array[i]];}return array;}
+function render(){
+ const list=$('result');list.replaceChildren();
+ if(!last.length){const li=document.createElement('li');li.textContent='Click Generate checkout to begin.';list.appendChild(li);return;}
+ last.forEach(({name,key,ge,scenario},index)=>{
+  const li=document.createElement('li');
+  const strong=document.createElement('strong');strong.textContent=name+(key==='C'?' — Goni':' — MMT');
+  li.appendChild(strong);
+  const tag=document.createElement('span');tag.className='tag';tag.textContent=key==='C'?'':`AG demonstration${ge?' + GE follow-up':''}`;li.appendChild(tag);
+  if(key!=='C'){
+   const note=document.createElement('div');note.className='instruction';
+   note.textContent='Demonstrate the against-gravity (AG) MMT: patient position, action, palpation, stabilization, and resistance.';
+   li.appendChild(note);
+   if(ge){
+    const prompt=document.createElement('div');prompt.className='instruction';prompt.style.marginTop='8px';
+    prompt.textContent='GE follow-up: Show or explain the GE patient position and movement. Hypothetical patient finding: '+scenario.finding+' What Lynch/Modified Lovett grade is this? (Do not simulate weakness or apply GE break resistance.)';
+    li.appendChild(prompt);
+    if(showAnswers){const ans=document.createElement('div');ans.className='instruction';ans.style.fontWeight='700';ans.textContent='Answer: '+scenario.answer;li.appendChild(ans);}
+   }
+  } else {const note=document.createElement('div');note.className='instruction';note.textContent='Measure PROM with goniometer, stabilize, use slight end-range overpressure, and report angle and normal ROM.';li.appendChild(note);}
+  list.appendChild(li);
+ });
+}
+$('generate').addEventListener('click',()=>{
+ $('message').textContent='';const groups={};const counts={};
+ for(const key of ['A','B','C']){
+  const items=[...new Set($('group'+key).value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean))];
+  const raw=$('count'+key).value,n=Number(raw);
+  if(raw===''||!Number.isInteger(n)||n<0){$('message').textContent=`${key==='A'?'UE MMT':key==='B'?'LE/Trunk MMT':'LE Goniometry'}: enter a valid nonnegative whole number.`;return;}
+  if(n>items.length){$('message').textContent=`${key==='A'?'UE MMT':key==='B'?'LE/Trunk MMT':'LE Goniometry'}: requested ${n}, but only ${items.length} unique items are available.`;return;}
+  groups[key]=items;counts[key]=n;
+ }
+ const eligibleA=groups.A.filter(name=>isGeEligible(name,'A')).length;
+ const eligibleB=groups.B.filter(name=>isGeEligible(name,'B')).length;
+ const maxGE=Math.min(counts.A,eligibleA)+Math.min(counts.B,eligibleB);
+ if(counts.A+counts.B>=2 && maxGE<2){$('message').textContent='Your current lists and counts cannot produce two GE-eligible MMTs. Add eligible tests or increase MMT picks.';return;}
+ let chosen=[];
+ // Sample up to 2,000 times to preserve a uniform, independent draw conditioned on two GE-eligible selections.
+ for(let attempt=0;attempt<2000;attempt++){
+  chosen=['A','B','C'].flatMap(key=>shuffle([...groups[key]]).slice(0,counts[key]).map(name=>({name,key})));
+  if(chosen.filter(x=>x.key!=='C'&&isGeEligible(x.name,x.key)).length>=Math.min(2,counts.A+counts.B))break;
+ }
+ // Fallback guarantees two eligible tests even when their proportion is extremely small.
+ if(chosen.filter(x=>x.key!=='C'&&isGeEligible(x.name,x.key)).length<Math.min(2,counts.A+counts.B)){
+  const forced=[];
+  for(const key of ['A','B']){
+   const eligible=shuffle(groups[key].filter(name=>isGeEligible(name,key)));
+   const noneligible=shuffle(groups[key].filter(name=>!isGeEligible(name,key)));
+   forced.push({key,eligible,noneligible});
+  }
+  let remaining=2;
+  const picked={A:[],B:[]};
+  for(const g of forced){const take=Math.min(g.eligible.length,counts[g.key],remaining);picked[g.key].push(...g.eligible.slice(0,take));remaining-=take;}
+  for(const g of forced){if(remaining>0){const extra=g.eligible.filter(x=>!picked[g.key].includes(x)).slice(0,Math.min(remaining,counts[g.key]-picked[g.key].length));picked[g.key].push(...extra);remaining-=extra.length;}}
+  chosen=['A','B'].flatMap(key=>{
+   const g=forced.find(x=>x.key===key);return [...picked[key],...shuffle([...g.eligible,...g.noneligible].filter(x=>!picked[key].includes(x))).slice(0,counts[key]-picked[key].length)].map(name=>({name,key}));
+  }).concat(shuffle([...groups.C]).slice(0,counts.C).map(name=>({name,key:'C'})));
+ }
+ const mmt=chosen.filter(x=>x.key!=='C');
+ const geCandidates=shuffle(mmt.filter(x=>isGeEligible(x.name,x.key)));
+ const geNames=new Set(geCandidates.slice(0,2).map(x=>x.key+'|'+x.name));
+ const scenarios=shuffle([...geScenarios]);let scenarioIndex=0;
+ last=shuffle(chosen.map(x=>{const ge=geNames.has(x.key+'|'+x.name);return {...x,ge,scenario:ge?scenarios[scenarioIndex++%scenarios.length]:null};}));
+ showAnswers=false;$('answers').textContent='Show GE answers';render();
+ $('summary').textContent=`${last.length} total tests · ${mmt.length} AG demonstrations · ${geNames.size} GE ROM scenarios · ${chosen.filter(x=>x.key==='C').length} goniometry measurements.`;
+});
+$('answers').addEventListener('click',()=>{showAnswers=!showAnswers;$('answers').textContent=showAnswers?'Hide GE answers':'Show GE answers';render();});
+$('copy').addEventListener('click',async()=>{
+ if(!last.length){$('message').textContent='Generate a checkout first.';return;}
+ const text=last.map((x,i)=>`${i+1}. ${x.name} — ${x.key==='C'?'Goni':`MMT — AG demonstration${x.ge?' + GE position/action; '+x.scenario.finding+(showAnswers?' Answer: '+x.scenario.answer:''):''}`}`).join('\n');
+ try{await navigator.clipboard.writeText(text);$('message').textContent='Results copied.';}catch{window.prompt('Copy your results:',text);}
+});
+</script></body></html>
